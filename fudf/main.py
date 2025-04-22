@@ -1,12 +1,21 @@
 from fudf.udf_setup import setup_udf_lib,compile_udflib,parse_source_files
+import warnings
 import logging
 from pathlib import Path
 import os
 import datetime
 import fudf.config as config
+try:
+    import fudf.private_config as pconfig
+except (ModuleNotFoundError,ImportError):
+    warnings.warn("private_config.py not found. Please create one with your username and password for the cluster.")
+    pconfig = None
+
 from argparse import ArgumentParser,ArgumentError
 import configparser
 
+import shutil 
+import subprocess
 config.CWD_ = os.getcwd()
 config.LOG_FILE = Path(config.CWD_).joinpath(config.LOG_FNAME_)
 
@@ -15,6 +24,14 @@ if os.path.exists(config.LOG_FILE):
 
 logger = logging.getLogger(str(config.LOG_FILE))
 
+import getpass
+import keyring
+from keyrings.alt import file
+
+
+kr = file.EncryptedKeyring()
+kr.file_path = str(Path(__file__).parent.joinpath(config.KEY_FILE_))
+keyring.set_keyring(kr)
 
 #setup logging
 timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -22,6 +39,40 @@ logging.basicConfig(filename = str(config.LOG_FILE),level = logging.INFO,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 
+def do_interactive(args):
+    # 1. Retrieve or prompt for stored password
+    user = args.user
+    pw = keyring.get_password('fudf', user)
+    if pw is None:
+        pw = getpass.getpass(f"Password for {user}@login-phoenix-rh9.pace.gatech.edu: ")
+        keyring.set_password('fudf', user, pw)
+
+    # 2. Forward all flags except 'user', 'hp', 'command', 'func' to salloc
+    flags = []
+    for key, val in vars(args).items():
+        if key in ('command', 'func', 'user', 'hp'):
+            continue
+        if val is None:
+            continue
+        flags.append(f"--{key}={val}")
+    salloc_cmd = "salloc " + " ".join(flags)
+
+    # 3. Change to home/project directory if provided
+    if args.hp:
+        remote_cmd = f"cd {args.hp} && {salloc_cmd}"
+    else:
+        remote_cmd = salloc_cmd
+
+    # 4. SSH into remote and run salloc
+    ssh_target = f"{args.user}@login-phoenix-rh9.pace.gatech.edu"
+    sshpass = shutil.which('sshpass')
+    if sshpass:
+        cmd = [sshpass, '-p', pw, 'ssh', '-t', ssh_target, remote_cmd]
+    else:
+        print("Warning: sshpass not found—falling back to manual SSH login.")
+        cmd = ['ssh', '-t', ssh_target, remote_cmd]
+
+    subprocess.run(cmd)
 
 
 def do_make(args):
@@ -86,6 +137,7 @@ def main():
     parser = ArgumentParser(prog='fudf')
     subs = parser.add_subparsers(dest='command', required=True)
 
+    #make
     mk = subs.add_parser('make', help='setup and compile UDF library')
     mk.add_argument('--config', type=str, help='path to .config file')
     mk.add_argument('--source_files', type=str, help='list of source files, e.g. "[a.c,b.c]"')
@@ -96,8 +148,50 @@ def main():
     mk.add_argument('--gcc_path', type=str, default=None, help='path to gcc if custom')
     mk.set_defaults(func=do_make)
 
+    #move
     mv = subs.add_parser('move', help='move files (future)')
     mv.set_defaults(func=do_move)
+
+    #interact/interactive/int
+    inter = subs.add_parser(
+        'int', aliases=['interactive', 'interact'],
+        help='SSH into the cluster and allocate an interactive Slurm session'
+    )
+    inter.add_argument('--nodes',   type=int,   required=False, help='number of nodes',default = config.NODES_)
+    inter.add_argument('--ntasks',  type=int,   required=False, help='number of tasks',default = config.NTASKS_)
+    inter.add_argument('--time',    type=str,   required=False, help='time limit, e.g. 8:00:00',default = config.TIME_)
+
+    inter.add_argument('--hp',      type=str,   default=None,  help='home/project dir on remote')
+    user,account,queue = None,None, None
+    if pconfig:
+        try:
+            user = pconfig.USER_
+        except AttributeError:
+            pass
+        
+        try:
+            account = pconfig.ACCOUNT_
+        except AttributeError:
+            pass
+
+        try:
+            queue = pconfig.QUEUE_
+        except AttributeError:
+            pass
+
+        
+    if account is None: 
+        inter.add_argument('--account',  type=str,   required=True, help='Slurm account')
+    else:
+        inter.add_argument('--account',  type=str,   required=False, help='Slurm account',default = account)
+    
+    if user is None:
+        inter.add_argument('--user',    type=str,   required=True, help='username for SSH')
+    else:
+        inter.add_argument('--user',    type=str,   required=False, help='username for SSH',default = user)
+    
+
+    inter.set_defaults(func=do_interactive)
 
     args = parser.parse_args()
     args.func(args)
