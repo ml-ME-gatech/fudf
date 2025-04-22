@@ -8,13 +8,13 @@ from argparse import ArgumentParser,ArgumentError
 import configparser
 
 config.CWD_ = os.getcwd()
-LOG_FILE_ = Path(config.CWD_).joinpath('fudf.log')
-logger = logging.getLogger(str(LOG_FILE_))
+config.LOG_FILE_ = Path(config.CWD_).joinpath(config.LOG_FNAME_)
+logger = logging.getLogger(str(config.LOG_FILE_))
 
 
 #setup logging
 timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-logging.basicConfig(filename = str(LOG_FILE_),level = logging.INFO,
+logging.basicConfig(filename = str(config.LOG_FILE_),level = logging.INFO,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 

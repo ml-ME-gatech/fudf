@@ -10,8 +10,11 @@ from argparse import ArgumentParser
 from collections import deque
 import stat
 import fudf.config as config
+import subprocess
+import logging
 
 _PATH = PosixPath if sys.platform == 'linux' or sys.platform == 'posix' else WindowsPath
+logger = logging.getLogger(str(config.LOG_FILE_))
 
 def find_fluent_dir(path: PurePath) -> PurePath:
 
@@ -308,17 +311,22 @@ def setup_udf_lib(source_files: List[str],
 
     modify_files(udflib,fudfp,source_files,gcc_path)
 
-def compile_udflib(udf_path: str,
-                   arch: str) -> None:
-    """
-    compile the udf library
-    """
-    if config.CWD_ is None:
-        raise ValueError('CWD_ is not set, cannot compile udf library')
-    
-    os.chdir(udf_path)
-    os.system(f'make "FLUENT_ARCH = {arch}"')
-    os.chdir(os.chdir(config.CWD_))
+
+def compile_udflib(udf_path: str, arch: str):
+    try:
+        result = subprocess.run(
+            ["make", f"FLUENT_ARCH={arch}"],
+            cwd=udf_path,
+            stdout=config.LOG_FILE.open("a"),
+            stderr=subprocess.STDOUT,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error("`make` failed (exit %d). See %s for details.", e.returncode, config.LOG_FILE)
+        raise
+    else:
+        logger.info("`make` completed successfully; output appended to %s", config.LOG_FILE)
+
 
 
 
