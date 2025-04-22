@@ -147,9 +147,9 @@ def modify_user_udf(file_name: str,
     while text:
         line = text.popleft()
         if 'CSOURCES' in line:
-            line = 'CSOURCES=' + (','.join(cfiles) if cfiles else '') + '\n'
+            line = 'CSOURCES=' + ' '.join(cfiles) if cfiles else '' + '\n'
         if 'HSOURCES' in line:
-            line = 'HSOURCES=' + (','.join(hfiles) if hfiles else '') + '\n'
+            line = 'HSOURCES=' + ' '.join(hfiles) if hfiles else '' + '\n'
         if 'FLUENT_INC' in line:
             line = 'FLUENT_INC=' + str(fluent_path.home) + '\n'
 
@@ -231,64 +231,6 @@ def is_config_creation() -> bool:
     args = parser.parse_args()
 
     return os.path.exists(args.config) and os.path.isfile(args.config) and os.path.splitext(args.config)[1] == '.config'
-
-def read_from_args() -> Tuple:
-
-    parser = ArgumentParser()
-    parser.add_argument('source_files')
-    parser.add_argument('--fluent_path',type = str,default = None,
-                        help = 'path to the fluent installation. This must be specified')
-    parser.add_argument('--arch',type = str,default = None,
-                        help = 'the archiectrure of the system currently using, this must be specified')
-    parser.add_argument('--sim_type',type = str,default = None,
-                       help = 'the type of simulation, i.e. 3ddp,2ddp, ect....')
-    parser.add_argument('--udf_path',type = str,default = 'libudf',
-                        help = 'name of the udf library')
-    parser.add_argument('--gcc_path',type = str,default = None,
-                        help = 'Path to gcc installation. If not provided simply use the loaded version')
-    
-    args = parser.parse_args()
-    if not args.fluent_path:
-        raise ValueError('Must specify fluent_path argument using command-line call')
-    if not args.arch:
-        raise ValueError('Must specify fluent arch argument using command-line call')
-    if not parser.sim_type:
-        raise ValueError('Must specify sim_type argument using command-line call')
-    
-    return parse_source_files(args.source_files),args.arch,args.sim_type,args.fluent_path,args.udf_path,args.gcc_path
-
-
-def read_from_config() -> Tuple:
-    parser = ArgumentParser()
-    
-    parser.add_argument('config')
-    args = parser.parse_args()
-    if os.path.splitext(args.config)[1] != '.config':
-        raise ValueError("Must specify a file with .config extension if using file input")
-    
-    config = configparser.ConfigParser()
-    if not os.path.exists(args.config) or not os.path.isfile(args.config):
-        raise FileNotFoundError(f'cannot find configuration file: {args.config}') 
-    
-    config.read(args.config)
-    config = config['udf']
-    if 'fluent_path' not in config:
-        raise ValueError('Must specify fluent_path argument using config file')
-    
-    if 'arch' not in config:
-        raise ValueError('Must specify fluent arch argument using config file')
-    
-    if 'sim_type' not in config:
-        raise ValueError('Must specify sim_type using config file')
-    
-    if 'source_files' not in config:
-        raise ValueError('must specific source files using config file')
-
-    udf_path = 'libudf' if 'udf_path' not in config else config['udf_path']
-    gcc_path = None if 'gcc_path' not in config else config['gcc_path']
-    source_files = parse_source_files(config['source_files'])
-
-    return source_files,config['arch'],config['sim_type'],config['fluent_path'],udf_path,gcc_path
 
 def setup_udf_lib(source_files: List[str],
                  arch: str,
