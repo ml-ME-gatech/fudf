@@ -9,12 +9,12 @@ import configparser
 
 config.CWD_ = os.getcwd()
 config.LOG_FILE_ = Path(config.CWD_).joinpath(config.LOG_FNAME_)
-logger = logging.getLogger(str(config.LOG_FILE_))
+logger = logging.getLogger(str(config.LOG_FILE))
 
 
 #setup logging
 timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-logging.basicConfig(filename = str(config.LOG_FILE_),level = logging.INFO,
+logging.basicConfig(filename = str(config.LOG_FILE),level = logging.INFO,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 

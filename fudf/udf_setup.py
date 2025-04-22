@@ -14,7 +14,7 @@ import subprocess
 import logging
 
 _PATH = PosixPath if sys.platform == 'linux' or sys.platform == 'posix' else WindowsPath
-logger = logging.getLogger(str(config.LOG_FILE_))
+logger = logging.getLogger(str(config.LOG_FILE))
 
 def find_fluent_dir(path: PurePath) -> PurePath:
 
