@@ -9,6 +9,10 @@ import configparser
 
 config.CWD_ = os.getcwd()
 config.LOG_FILE = Path(config.CWD_).joinpath(config.LOG_FNAME_)
+
+if os.path.exists(config.LOG_FILE):
+    os.remove(config.LOG_FILE)
+
 logger = logging.getLogger(str(config.LOG_FILE))
 
 

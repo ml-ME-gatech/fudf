@@ -209,12 +209,16 @@ def modify_files(udf_lib: UDFLib,
     modify_make1(str(udf_lib.src_path.joinpath('makefile')))
 
 
-def parse_source_files(src_string: str) -> List[str]: 
+def parse_source_files(src_string: str) -> List[str]:
     src_string = src_string.strip()
-    if src_string[0] == '[' and src_string[-1] == ']':
-        return src_string[1:-1].split(',')
+    # strip brackets if present
+    if src_string.startswith('[') and src_string.endswith(']'):
+        content = src_string[1:-1].strip()
     else:
-        return src_string
+        content = src_string.strip()
+    # split on commas, strip whitespace, ignore empty
+    files = [item.strip().strip("'").strip('"') for item in content.split(',') if item.strip()]
+    return files
 
 def is_config_creation() -> bool:
     """
