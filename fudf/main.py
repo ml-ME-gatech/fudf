@@ -8,7 +8,7 @@ from argparse import ArgumentParser,ArgumentError
 import configparser
 
 config.CWD_ = os.getcwd()
-config.LOG_FILE_ = Path(config.CWD_).joinpath(config.LOG_FNAME_)
+config.LOG_FILE = Path(config.CWD_).joinpath(config.LOG_FNAME_)
 logger = logging.getLogger(str(config.LOG_FILE))
 
 
