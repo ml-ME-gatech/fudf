@@ -9,7 +9,7 @@ import configparser
 from argparse import ArgumentParser
 from collections import deque
 import stat
-import config
+import fudf.config as config
 
 _PATH = PosixPath if sys.platform == 'linux' or sys.platform == 'posix' else WindowsPath
 

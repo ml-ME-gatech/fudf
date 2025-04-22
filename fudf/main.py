@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import os
 import datetime
-import config
+import fudf.config as config
 from argparse import ArgumentParser,ArgumentError
 import configparser
 
